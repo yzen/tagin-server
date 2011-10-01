@@ -1,20 +1,3 @@
-/*
-
-var express = require('express');
-
-(function () {
-    var app = express.createServer();
-
-    app.post('/', function(req, res){
-    	console.log(JSON.stringify(req.body));
-        var fingerprints = req.body.fingerprints;
-    	console.log(JSON.stringify(fingerprints));
-    	res.send("WORKED");
-    });
-    
-    app.listen(8080);
-})();
-*/
 (function () {
 
     var http = require('http');

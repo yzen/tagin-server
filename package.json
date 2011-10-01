@@ -1,0 +1,38 @@
+{
+    "name": "tagin-server",
+    "version": "0.1",
+    "description": "A server for tagin wifi location applications.",
+    "keywords": [
+        "tagin",
+        "tagin-server",
+        "wifi",
+        "geolocation",
+        "javascript"
+    ],
+    "maintainers": [
+        {
+            "name": "Yura Zenevich",
+            "email": "yura.zenevich@gmail.com"
+        }
+    ],
+    "bugs": {
+        "mail": "yura.zenevich@gmail.com",
+        "web": "https://github.com/yzen/tagin-server"
+    },
+    "licenses": [
+        {
+            "type": "MIT",
+            "url": "http://www.opensource.org/licenses/mit-license.php"
+        }
+    ],
+    "repositories": [
+        {
+            "type": "git",
+            "url": "git@github.com:yzen/tagin-server.git"
+        }
+    ],
+    "dependencies": {},
+    "engines" : { "node" : ">=0.4.11" },
+    "directories": {},
+    "main": "./main.js"
+}
