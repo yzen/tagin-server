@@ -6,12 +6,20 @@
     var utils = require("utils");
     
     var makeDBRequest = function (options, emitter, event) {
+        var headers;
+        if (options.type === "POST") {
+            headers = {
+                "Content-Type": "application/json"
+            };
+        }
+        headers = options.headers || headers;
+        
         var req = http.request({
             host: "127.0.0.1",
             port: "5984",
             method: options.type,
             path: options.path,
-            headers: options.headers
+            headers: headers
         }, function (res) {
             var data = "";
             res.setEncoding("utf8");
@@ -19,15 +27,26 @@
                 data += chunk;
             });
             res.on("end", function () {
-                emitter.emit(event, data);
+                var parsed;
+                try {
+                    parsed = JSON.parse(data);
+                }
+                catch (e) {
+                    console.log("ERROR: " + e);
+                }
+                emitter.emit(event, parsed);
             });
         });
+        
         req.on('error', function(e) {
             console.log("ERROR: " + e.message);
+            emitter.emit("error", e.message);
         });
+        
         if (options.data) {
             req.write(JSON.stringify(options.data));
         }
+        
         req.end();
     };
     
@@ -182,12 +201,6 @@
             minDistance = minDistance && minDistance < distance ? minDistance : distance;
             maxDistance = maxDistance && maxDistance > distance ? maxDistance : distance;
         });
-/*
-        utils.each(distances, function (distance, tag) {
-            distances[tag] = normalize(distance, maxDistance, minDistance);
-        });
-*/
-       
         return distances;
     };
     
@@ -198,61 +211,65 @@
         var togo = {};
     
         req.on("data", function (data) {
+        
+            data = JSON.parse(data);
+            togo.data = data;
+            togo.radioId = getRadioId(data);
             
-            togo.data = JSON.parse(data);;
-            togo.radioId = getRadioId(JSON.parse(data));
+            emitter.on("error", function (errorMessage) {
+                errorHandler(res, errorMessage);
+            });
             
-            emitter.on("radio", function (radio) {
-                togo.radios = JSON.parse(radio);
+            emitter.on("radio", function (radios) {
+                if (!radios) {
+                    errorHandler(res, "Response is empty");
+                }
+                togo.radios = radios;
                 successHandler(res, calculateDistances(togo));
             });
             emitter.on("tagToFingerprint", function (fingerprints) {
-                togo.fingerprints = JSON.parse(fingerprints);
-                var radios = buildKeys(parseRadioIds(JSON.parse(fingerprints)));
+                if (!fingerprints) {
+                    errorHandler(res, "Response is empty");
+                }
+                togo.fingerprints = fingerprints;
+                var radios = buildKeys(parseRadioIds(fingerprints));
                 if (!inArray(togo.radioId, radios.keys)) {
                     radios.keys.push(togo.radioId);
                 }
                 makeDBRequest({
                     type: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
                     path: "/tagin/_design/tagin/_view/radio?group=true",
                     data: radios
                 }, emitter, "radio");
             });
             emitter.on("fingerprintToTag", function (fingerprints) {
+                if (!fingerprints) {
+                    errorHandler(res, "Response is empty");
+                }
                 makeDBRequest({
                     type: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
                     path: "/tagin/_design/tagin/_view/tagToFingerprint",
-                    data: getKeys(JSON.parse(fingerprints))
+                    data: getKeys(fingerprints)
                 }, emitter, "tagToFingerprint");
             });
             emitter.on("macToFingerprint", function (fingerprints) {
-                var fps = JSON.parse(fingerprints);
-                if (fps.rows.length < 1) {
+                if (!fingerprints) {
+                    errorHandler(res, "Response is empty");
+                }
+                if (fingerprints.rows.length < 1) {
                     successHandler(res, {});
                     return;
                 }
                 makeDBRequest({
                     type: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
                     path: "/tagin/_design/tagin/_view/fingerprintToTag?group=true",
-                    data: getKeys(fps)
+                    data: getKeys(fingerprints)
                 }, emitter, "fingerprintToTag");
             });
             makeDBRequest({
                 type: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
                 path: "/tagin/_design/tagin/_view/macToFingerprint?group=true",
-                data: getMacKeys(JSON.parse(data))
+                data: getMacKeys(data)
             }, emitter, "macToFingerprint");
             
         });
@@ -263,14 +280,17 @@
         var emitter = new events.EventEmitter();
         
         emitter.on("saveWifi", function (response) {
-            res.end(response);
+            if (!response) {
+                errorHandler(res, "Response is empty");
+            }
+            successHandler(res, response);
+        });
+        emitter.on("error", function (errorMessage) {
+            errorHandler(res, errorMessage);
         });
         req.on("data", function (data) {
             makeDBRequest({
                 type: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
                 path: "/tagin/_bulk_docs",
                 data: {
                     docs: JSON.parse(data)
@@ -287,7 +307,7 @@
     var successHandler = function (res, response) {
         console.log(JSON.stringify(response));
         res.writeHead(200, {"Content-Type": "application/json"});
-        res.end(JSON.stringify(response));
+        res.end(typeof response === "string" ? response : JSON.stringify(response));
     };
     
     var errorHandler = function (res, error) {
