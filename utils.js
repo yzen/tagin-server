@@ -1,4 +1,8 @@
+/*global module*/
+
 (function () {
+
+    "use strict";
 
     // Taked from https://github.com/fluid-project/infusion/blob/master/src/webapp/framework/core/js/Fluid.js
 

@@ -1,54 +1,11 @@
 (function () {
 
-    var http = require('http');
-    var url = require('url');
-    var events = require('events');
-    var utils = require("utils");
+    var http = require("http"),
+        url = require("url"),
+        events = require("events"),
+        utils = require("./utils.js"),
+        db = require("./db.js");
     
-    var makeDBRequest = function (options, emitter, event) {
-        var headers;
-        if (options.type === "POST") {
-            headers = {
-                "Content-Type": "application/json"
-            };
-        }
-        headers = options.headers || headers;
-        
-        var req = http.request({
-            host: "127.0.0.1",
-            port: "5984",
-            method: options.type,
-            path: options.path,
-            headers: headers
-        }, function (res) {
-            var data = "";
-            res.setEncoding("utf8");
-            res.on("data", function (chunk) {
-                data += chunk;
-            });
-            res.on("end", function () {
-                var parsed;
-                try {
-                    parsed = JSON.parse(data);
-                }
-                catch (e) {
-                    console.log("ERROR: " + e);
-                }
-                emitter.emit(event, parsed);
-            });
-        });
-        
-        req.on('error', function(e) {
-            console.log("ERROR: " + e.message);
-            emitter.emit("error", e.message);
-        });
-        
-        if (options.data) {
-            req.write(JSON.stringify(options.data));
-        }
-        
-        req.end();
-    };
     
     var getRadioId = function (data) {
         for (i = 0; i < data.length; ++i) {
@@ -227,7 +184,9 @@
                 togo.radios = radios;
                 successHandler(res, calculateDistances(togo));
             });
+
             emitter.on("tagToFingerprint", function (fingerprints) {
+                
                 if (!fingerprints) {
                     errorHandler(res, "Response is empty");
                 }
@@ -236,23 +195,27 @@
                 if (!inArray(togo.radioId, radios.keys)) {
                     radios.keys.push(togo.radioId);
                 }
-                makeDBRequest({
-                    type: "POST",
+                
+                db.post({
                     path: "/tagin/_design/tagin/_view/radio?group=true",
                     data: radios
                 }, emitter, "radio");
             });
+
             emitter.on("fingerprintToTag", function (fingerprints) {
+            
                 if (!fingerprints) {
                     errorHandler(res, "Response is empty");
                 }
-                makeDBRequest({
-                    type: "POST",
+                
+                db.post({
                     path: "/tagin/_design/tagin/_view/tagToFingerprint",
                     data: getKeys(fingerprints)
                 }, emitter, "tagToFingerprint");
             });
+
             emitter.on("macToFingerprint", function (fingerprints) {
+
                 if (!fingerprints) {
                     errorHandler(res, "Response is empty");
                 }
@@ -260,18 +223,17 @@
                     successHandler(res, {});
                     return;
                 }
-                makeDBRequest({
-                    type: "POST",
+
+                db.post({
                     path: "/tagin/_design/tagin/_view/fingerprintToTag?group=true",
                     data: getKeys(fingerprints)
                 }, emitter, "fingerprintToTag");
             });
-            makeDBRequest({
-                type: "POST",
+            
+            db.post({
                 path: "/tagin/_design/tagin/_view/macToFingerprint?group=true",
                 data: getMacKeys(data)
             }, emitter, "macToFingerprint");
-            
         });
     };
     
@@ -285,12 +247,13 @@
             }
             successHandler(res, response);
         });
+        
         emitter.on("error", function (errorMessage) {
             errorHandler(res, errorMessage);
         });
+        
         req.on("data", function (data) {
-            makeDBRequest({
-                type: "POST",
+            db.post({
                 path: "/tagin/_bulk_docs",
                 data: {
                     docs: JSON.parse(data)
