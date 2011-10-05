@@ -8,6 +8,7 @@
 
     var utils = {};
     
+    // Verify if the object is arrayable.
     utils.isArrayable = function (list) {
         return list && 
             typeof list === "object" && 
@@ -16,6 +17,7 @@
             typeof list.splice === 'function';
     };
     
+    // Iterate over the object/array and apply callback to every its every element.
     utils.each = function (list, callback) {
         if (!list) {
             return;
@@ -45,6 +47,7 @@
         togo[key] = value;
     };
     
+    // Map transformation from array/object to an array based on the callback criteria.
     utils.map = function (list) {
         if (!list) {
             return;
@@ -65,6 +68,7 @@
         return togo;
     };
     
+    // Find an element in the array/list based on the callback criteria.
     utils.find = function (list, callback, deflt) {
         var disp;
         if (utils.isArrayable(list)) {
