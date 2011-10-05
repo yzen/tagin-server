@@ -5,9 +5,10 @@
         events = require("events"),
         utils = require("./utils.js"),
         engine = require("./engine.js"),
-        db = require("./db.js");
+        db = require("./db.js"),
+        app = {};
     
-    var handleFetch = function (req, res) {
+    app.handleFetch = function (req, res) {
         console.log("Handling request to /fetch");
         var emitter = new events.EventEmitter();
         
@@ -20,21 +21,21 @@
             togo.radioId = engine.getRadioId(data);
             
             emitter.on("error", function (errorMessage) {
-                errorHandler(res, errorMessage);
+                app.errorHandler(res, errorMessage);
             });
             
             emitter.on("radio", function (radios) {
                 if (!radios) {
-                    errorHandler(res, "Response is empty");
+                    app.errorHandler(res, "Response is empty");
                 }
                 togo.radios = radios;
-                successHandler(res, engine.calculateDistances(togo));
+                app.successHandler(res, engine.calculateDistances(togo));
             });
 
             emitter.on("tagToFingerprint", function (fingerprints) {
                 
                 if (!fingerprints) {
-                    errorHandler(res, "Response is empty");
+                    app.errorHandler(res, "Response is empty");
                 }
                 togo.fingerprints = fingerprints;
                 var radios = engine.buildKeys(engine.parseRadioIds(fingerprints));
@@ -55,7 +56,7 @@
             emitter.on("fingerprintToTag", function (fingerprints) {
             
                 if (!fingerprints) {
-                    errorHandler(res, "Response is empty");
+                    app.errorHandler(res, "Response is empty");
                 }
                 
                 db.post({
@@ -67,10 +68,10 @@
             emitter.on("macToFingerprint", function (fingerprints) {
 
                 if (!fingerprints) {
-                    errorHandler(res, "Response is empty");
+                    app.errorHandler(res, "Response is empty");
                 }
                 if (fingerprints.rows.length < 1) {
-                    successHandler(res, {});
+                    app.successHandler(res, {});
                     return;
                 }
 
@@ -87,19 +88,19 @@
         });
     };
     
-    var handleSave = function (req, res) {
+    app.handleSave = function (req, res) {
         console.log("Handling request to /save");
         var emitter = new events.EventEmitter();
         
         emitter.on("saveWifi", function (response) {
             if (!response) {
-                errorHandler(res, "Response is empty");
+                app.errorHandler(res, "Response is empty");
             }
-            successHandler(res, response);
+            app.successHandler(res, response);
         });
         
         emitter.on("error", function (errorMessage) {
-            errorHandler(res, errorMessage);
+            app.errorHandler(res, errorMessage);
         });
         
         req.on("data", function (data) {
@@ -112,18 +113,13 @@
         });
     };
     
-    var config = {
-        "fetch": handleFetch,
-        "save": handleSave
-    };
-    
-    var successHandler = function (res, response) {
+    app.successHandler = function (res, response) {
         console.log(JSON.stringify(response));
         res.writeHead(200, {"Content-Type": "application/json"});
         res.end(typeof response === "string" ? response : JSON.stringify(response));
     };
     
-    var errorHandler = function (res, error) {
+    app.errorHandler = function (res, error) {
         console.log(error);
         res.writeHead(200, {"Content-Type": "application/json"});
         res.end(JSON.stringify({
@@ -132,17 +128,26 @@
         }));
     };
     
-    var applyHandler = function (handler, req, res) {
+    app.applyHandler = function (handler, req, res) {
         if (!handler) {
-            return errorHandler(res, "Invalid Path");
+            return app.errorHandler(res, "Invalid Path");
         }
         handler(req, res);
     };
-
-    http.createServer(function (req, res) {
-        req.setEncoding('utf8');
-        var requestHandler = config[url.parse(req.url).pathname.slice(1)];
-        applyHandler(requestHandler, req, res);
-    }).listen(8080, "127.0.0.1");
+    
+    app.start = function (config) {
+        http.createServer(function (req, res) {
+            req.setEncoding('utf8');
+            var requestHandler = config[url.parse(req.url).pathname.slice(1)];
+            app.applyHandler(requestHandler, req, res);
+        }).listen(config.port, config.url);
+    };
+    
+    app.start({
+        url: "127.0.0.1",
+        port: 8080,
+        fetch: app.handleFetch,
+        save: app.handleSave
+    });
     
 })();
