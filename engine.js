@@ -6,6 +6,7 @@
     
     var utils = require("./utils.js"), engine = {};
     
+    // Find the radio payload for the device that submitted it.
     engine.getRadioId = function (data) {
         return utils.find(data, function (value) {
             if (value.type === "radio") {
@@ -14,10 +15,12 @@
         });
     };
     
+    // Build a keys structure for mutlitple match query.
     engine.buildKeys = function (keys) {
         return {keys: keys};
     };
     
+    // Get the list of mac addresses within the payload.
     engine.getMacKeys = function (data) {
         return engine.buildKeys(utils.map(data, function (value) {
             if (value.type === "beacon") {
@@ -26,6 +29,7 @@
         }));
     };
     
+    // Build a list of all tags related to the mac addresses scanned. 
     engine.parseResponse = function (response) {
         var list = [], seen = {};
         return utils.each(response.rows, function (row) {
@@ -38,6 +42,7 @@
         });
     };
     
+    // Get all radio ids.
     engine.parseRadioIds = function (response) {
         var seen={};
         return utils.map(response.rows, function (row) {
@@ -49,10 +54,12 @@
         });
     };
     
+    // Build a query payload for finding all related tags.
     engine.getKeys = function (response) {
         return engine.buildKeys(engine.parseResponse(response));
     };
     
+    // Lookup RSSI range based on the radio id passed.
     engine.lookupRange = function (radios, id) {
         return utils.find(radios.rows, function (row) {
             if (row.key === id) {
@@ -61,6 +68,7 @@
         });
     };
     
+    // Calculate rssi range for current device based on latest data and what's in the db.
     engine.getRange = function (radios, id, data) {
         var range = {};
         utils.each(data, function (fp) {
@@ -80,6 +88,7 @@
         };
     };
     
+    // Normalize values based on min and max to the values in the interval from 0 to 1.
     engine.normalize = function (val, min, max) {
         if (max === min) {
             return 1;
@@ -87,6 +96,7 @@
         return (val - min) / (max - min);
     };
     
+    // Get ranks for macs within fingerprints in the data.
     engine.getRanks = function (data, range) {
         var ranks = {};
         utils.each(data, function (fp) {
@@ -98,6 +108,7 @@
         return ranks;
     };
     
+    // Calculate the distance between the rank vectors.
     engine.getDistance = function (tagRanks, ranks) {
         var dSquared = 0;
         utils.each(tagRanks, function (tagRank, tagMac) {
@@ -113,6 +124,7 @@
         return Math.sqrt(dSquared);
     };
     
+    // Calculate and normalize the distances to tags based on current wifi data.
     engine.calculateDistances = function (data) {
         var ranks = engine.getRanks(data.data, engine.getRange(data.radios, data.radioId, data.data));
         var tags = {};
