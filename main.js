@@ -33,7 +33,6 @@
             });
 
             emitter.on("tagToFingerprint", function (fingerprints) {
-                
                 if (!fingerprints) {
                     app.errorHandler(res, "Response is empty");
                 }
@@ -46,7 +45,6 @@
                 })) {
                     radios.keys.push(togo.radioId);
                 }
-                
                 db.post({
                     path: "/tagin/_design/tagin/_view/radio?group=true",
                     data: radios
@@ -54,19 +52,16 @@
             });
 
             emitter.on("fingerprintToTag", function (fingerprints) {
-            
                 if (!fingerprints) {
                     app.errorHandler(res, "Response is empty");
                 }
-                
                 db.post({
                     path: "/tagin/_design/tagin/_view/tagToFingerprint",
                     data: engine.getKeys(fingerprints)
                 }, emitter, "tagToFingerprint");
             });
-
+            
             emitter.on("macToFingerprint", function (fingerprints) {
-
                 if (!fingerprints) {
                     app.errorHandler(res, "Response is empty");
                 }
@@ -74,7 +69,6 @@
                     app.successHandler(res, {});
                     return;
                 }
-
                 db.post({
                     path: "/tagin/_design/tagin/_view/fingerprintToTag?group=true",
                     data: engine.getKeys(fingerprints)

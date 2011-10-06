@@ -38,7 +38,7 @@
         }       
     };
     
-    var mapImpl = function (list, togo, key, args) {
+    var transformImpl = function (list, togo, key, args) {
         var value = list[key];
         var i = 1;
         for (i; i < args.length; ++i) {
@@ -48,7 +48,7 @@
     };
     
     // Map transformation from array/object to an array based on the callback criteria.
-    utils.map = function (list) {
+    utils.transform = function (list) {
         if (!list) {
             return;
         }
@@ -57,15 +57,40 @@
         if (isArrayable) {
             var i;
             for (i = 0; i < list.length; ++i) {
-                mapImpl(list, togo, i, arguments);
+                transformImpl(list, togo, i, arguments);
             }
         } else {
             var key;
             for (key in list) {
-                mapImpl(list, togo, key, arguments);
+                transformImpl(list, togo, key, arguments);
             }
         }
         return togo;
+    };
+    
+    utils.map = function (list) {
+        var list = utils.transform.apply(null, arguments);
+        return utils.remove_if(list, function (val) {
+            return typeof val === "undefined";
+        });
+    };
+    
+    utils.remove_if = function (source, fn) {
+        if (utils.isArrayable(source)) {
+            for (var i = 0; i < source.length; ++i) {
+                if (fn(source[i], i)) {
+                    source.splice(i, 1);
+                    --i;
+                }
+            }
+        } else {
+            for (var key in source) {
+                if (fn(source[key], key)) {
+                    delete source[key];
+                }
+            }
+        }
+        return source;
     };
     
     // Find an element in the array/list based on the callback criteria.

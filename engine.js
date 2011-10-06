@@ -29,17 +29,18 @@
         }));
     };
     
-    // Build a list of all tags related to the mac addresses scanned. 
+    // Build a list of all tags/urns related to the mac addresses scanned. 
     engine.parseResponse = function (response) {
         var list = [], seen = {};
-        return utils.each(response.rows, function (row) {
-            utils.each(row, function (val, key) {
+        utils.each(response.rows, function (row) {
+            utils.each(row.value, function (val, key) {
                 if (!seen[key]) {
                     seen[key] = true;
                     list.push(key);
                 }
             });
         });
+        return list;
     };
     
     // Get all radio ids.
