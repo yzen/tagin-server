@@ -10,12 +10,17 @@
     
     app.handleFetch = function (req, res) {
         console.log("Handling request to /fetch");
-        var emitter = new events.EventEmitter();
+        var emitter = new events.EventEmitter(), togo = {}, data = "";
         
-        var togo = {};
-    
-        req.on("data", function (data) {
+        req.on("data", function (chunk) {
+            data += chunk;
+        });
         
+        req.on("end", function () {
+            if (!data) {
+                return app.errorHandler(res, "Request payload is empty");
+            }
+            
             data = JSON.parse(data);
             togo.data = data;
             togo.radioId = engine.getRadioId(data);
@@ -26,7 +31,7 @@
             
             emitter.on("radio", function (radios) {
                 if (!radios) {
-                    app.errorHandler(res, "Response is empty");
+                    return app.errorHandler(res, "Response is empty");
                 }
                 togo.radios = radios;
                 app.successHandler(res, engine.calculateDistances(togo));
@@ -34,7 +39,7 @@
 
             emitter.on("tagToFingerprint", function (fingerprints) {
                 if (!fingerprints) {
-                    app.errorHandler(res, "Response is empty");
+                    return app.errorHandler(res, "Response is empty");
                 }
                 togo.fingerprints = fingerprints;
                 var radios = engine.buildKeys(engine.parseRadioIds(fingerprints));
@@ -53,7 +58,7 @@
 
             emitter.on("fingerprintToTag", function (fingerprints) {
                 if (!fingerprints) {
-                    app.errorHandler(res, "Response is empty");
+                    return app.errorHandler(res, "Response is empty");
                 }
                 db.post({
                     path: "/tagin/_design/tagin/_view/tagToFingerprint",
@@ -63,11 +68,10 @@
             
             emitter.on("macToFingerprint", function (fingerprints) {
                 if (!fingerprints) {
-                    app.errorHandler(res, "Response is empty");
+                    return app.errorHandler(res, "Response is empty");
                 }
                 if (fingerprints.rows.length < 1) {
-                    app.successHandler(res, {});
-                    return;
+                    return app.successHandler(res, {});
                 }
                 db.post({
                     path: "/tagin/_design/tagin/_view/fingerprintToTag?group=true",
@@ -84,11 +88,11 @@
     
     app.handleSave = function (req, res) {
         console.log("Handling request to /save");
-        var emitter = new events.EventEmitter();
+        var emitter = new events.EventEmitter(), data = "";
         
         emitter.on("saveWifi", function (response) {
             if (!response) {
-                app.errorHandler(res, "Response is empty");
+                return app.errorHandler(res, "Response is empty");
             }
             app.successHandler(res, response);
         });
@@ -96,8 +100,14 @@
         emitter.on("error", function (errorMessage) {
             app.errorHandler(res, errorMessage);
         });
-        
-        req.on("data", function (data) {
+
+        req.on("data", function (chunk) {
+            data += chunk;
+        });
+        req.on("end", function () {
+            if (!data) {
+                return app.errorHandler(res, "Request payload is empty");
+            }
             db.post({
                 path: "/tagin/_bulk_docs",
                 data: {
@@ -138,7 +148,7 @@
     };
     
     app.start({
-        url: "127.0.0.1",
+        url: "0.0.0.0",
         port: 8080,
         fetch: app.handleFetch,
         save: app.handleSave
