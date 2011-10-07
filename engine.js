@@ -76,8 +76,8 @@
             if (fp.type !== "fingerprint") {
                 return;
             }
-            range.min_rssi = range.min_rssi && range.min_rssi < fp.rssi ? range.min_rssi : fp.rssi;
-            range.max_rssi = range.max_rssi && range.max_rssi > fp.rssi ? range.max_rssi : fp.rssi;
+            range.min_rssi = typeof range.min_rssi !== "undefined" && range.min_rssi < fp.rssi ? range.min_rssi : fp.rssi;
+            range.max_rssi = typeof range.max_rssi !== "undefined" && range.max_rssi > fp.rssi ? range.max_rssi : fp.rssi;
         });
         var dbRange = engine.lookupRange(radios, id);
         if (!dbRange) {
@@ -151,14 +151,14 @@
         utils.each(tagRanks, function (rankList, tag) {
             var distance = engine.getDistance(rankList, ranks);
             distances[tag] = distance;
-            minDistance = minDistance && minDistance < distance ? minDistance : distance;
-            maxDistance = maxDistance && maxDistance > distance ? maxDistance : distance;
+            minDistance = typeof minDistance !== "undefined" && minDistance < distance ? minDistance : distance;
+            maxDistance = typeof maxDistance !== "undefined" && maxDistance > distance ? maxDistance : distance;
         });
-        
+
         utils.each(distances, function (distance, tag) {
             distances[tag] = engine.normalize(distance, maxDistance, minDistance);
         });
-        
+
         return distances;
     };
     
